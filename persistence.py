@@ -2,12 +2,13 @@ import datetime
 from peewee import *
 
 
-db_connection = SqliteDatabase(':memory:')
+db_connection = SqliteDatabase('temp.db')
 db = {}
 (system, guest)=(None, None)
 
 class User(Model):
     username = TextField()
+    token = TextField()
     class Meta:
         database = db_connection
 
@@ -18,9 +19,7 @@ def make_persistent(resource):
         creator = ForeignKeyField(User, backref=resource)
         class Meta:
             database = db_connection
-
-    BaseModel.__name__=resource
-    BaseModel.__qualname__=resource
+            db_table = resource
 
     db[resource] = BaseModel
 
@@ -28,9 +27,15 @@ def make_persistent(resource):
 
 def setup():
     global system, guest
-    db_connection.create_tables([User]+list(db.values()))
-    system=User.create(username='system')
-    guest=User.create(username='guest')
+    print('creating tables for', db.keys())
+    db_connection.connect()
+    db_connection.create_tables([User])
+    for resource in db.keys():
+        db[resource] = make_persistent(resource)
+        db_connection.create_tables([db[resource]])
+    system=User.create(username='system', token='system')
+    guest=User.create(username='guest', token='guest')
+    db_connection.close()
 
 def test():
     make_persistent('todos')

@@ -1,22 +1,23 @@
 from flask import Flask,jsonify,request
-
+from persistence import *
 app = Flask(__name__)
 
-db = {}
+
 (create, list, retrieve, update, delete) = ('create', 'list', 'retrieve', 'update', 'delete')
 
 
 class Anyone:
     def handle_list(r, check_request, error):
+        db_connection.connect()
         if check_request():
-            return jsonify(db[r])
+            return jsonify([e.content for e in db[r].select()])
         else:
             return error()
 
     def handle_create(r, check_request, error):
         if check_request():
-            creator = {'creator':request.headers['token']} if 'token' in request.headers else {'creator':'guest'}
-            db[r].append({**request.json,**creator})
+            creator = User.get(token=request.headers['token']) if 'token' in request.headers else User.get(name='guest')
+            db[r].create(content=request.json,creator=creator)
             return 'created', 201
         else:
             return error()           
@@ -64,7 +65,7 @@ class Anyone:
     @classmethod
     def can(cls, actions, resource):
         if resource not in db:
-            db[resource]=[]
+            db[resource]=None 
         for action in actions:
             if action == list:
                 app.add_url_rule('/'+resource, 'list_'+resource, lambda:cls.handle_list(resource, cls.check_request, cls.error))
@@ -87,6 +88,9 @@ class AuthenticatedUser(Anyone):
 class Creator(AuthenticatedUser):    
     def check_item(item):
         return request.headers['token'] == item['creator']
+
+def end():
+    setup()
 
 
 @app.route('/')
