@@ -15,7 +15,7 @@ class Anyone:
 
     def handle_create(r, check_request, error):
         if check_request():
-            creator = {'creator':request.headers['token']} if 'token' in request.headers else {'creator':'system'}
+            creator = {'creator':request.headers['token']} if 'token' in request.headers else {'creator':'guest'}
             db[r].append({**request.json,**creator})
             return 'created', 201
         else:
