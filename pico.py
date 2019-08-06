@@ -9,7 +9,7 @@ app = Flask(__name__)
 def unroll(row):
         to_dict = model_to_dict(row, recurse=False)
         props = to_dict.pop('properties')
-        return {**to_dict, **props}
+        return {**props, **to_dict}
 
 class Anyone:
     def handle_read_all(r, check_request, error):
