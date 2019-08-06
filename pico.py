@@ -1,5 +1,6 @@
 from flask import Flask,jsonify,request
 from persistence import *
+from playhouse.shortcuts import model_to_dict
 app = Flask(__name__)
 
 
@@ -10,14 +11,14 @@ class Anyone:
     def handle_list(r, check_request, error):
         db_connection.connect()
         if check_request():
-            return jsonify([e.content for e in db[r].select()])
+            return jsonify([model_to_dict(e, recurse=False) for e in db[r].select()])
         else:
             return error()
 
     def handle_create(r, check_request, error):
         if check_request():
             creator = User.get(token=request.headers['token']) if 'token' in request.headers else User.get(name='guest')
-            db[r].create(content=request.json,creator=creator)
+            db[r].create(data=request.json['data'],creator=creator)
             return 'created', 201
         else:
             return error()           
