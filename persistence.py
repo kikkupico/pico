@@ -23,7 +23,7 @@ class User(Model):
 
 def make_persistent(resource):        
     class BaseModel(Model):
-        data = JSONField()
+        properties = JSONField()
         created_at = DateTimeField(default=datetime.datetime.now)
         creator = ForeignKeyField(User, backref=resource)
         class Meta:

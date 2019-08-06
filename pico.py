@@ -4,30 +4,35 @@ from playhouse.shortcuts import model_to_dict
 app = Flask(__name__)
 
 
-(create, list, retrieve, update, delete) = ('create', 'list', 'retrieve', 'update', 'delete')
+(create, read, update, delete) = ('create', 'read', 'update', 'delete')
 
+def unroll(row):
+        to_dict = model_to_dict(row, recurse=False)
+        props = to_dict.pop('properties')
+        return {**to_dict, **props}
 
 class Anyone:
-    def handle_list(r, check_request, error):
+    def handle_read_all(r, check_request, error):
         db_connection.connect()
-        if check_request():
-            return jsonify([model_to_dict(e, recurse=False) for e in db[r].select()])
+        if check_request():            
+            return jsonify([unroll(e) for e in db[r].select()])
         else:
             return error()
 
     def handle_create(r, check_request, error):
         if check_request():
             creator = User.get(token=request.headers['token']) if 'token' in request.headers else User.get(name='guest')
-            db[r].create(data=request.json['data'],creator=creator)
-            return 'created', 201
+            r = db[r].create(properties=request.json,creator=creator)
+            return jsonify(unroll(r)), 201
         else:
             return error()           
 
-    def handle_retrieve(r, i, check_request, check_item, error):
+    def handle_read_one(r, i, check_request, check_item, error):
         if check_request():
-            item = db[r][i]
+            item = db[r].get_or_none(id=i)
+            if(item is None): return 'Not found', 404
             if(check_item(item)):
-                return jsonify(db[r][i])
+                return jsonify(unroll(item))
             else:
                 return error()
         else:
@@ -35,10 +40,12 @@ class Anyone:
 
     def handle_update(r, i, check_request, check_item, error):
         if check_request():
-            item = db[r][i]
+            item = db[r].get_or_none(id=i)
+            if(item is None): return 'Not found', 404
             if(check_item(item)):
-                db[r][i] = {**db[r][i], **request.json}
-                return jsonify(db[r][i])            
+                item.properties = {**item.properties, **request.json}
+                item.save()
+                return jsonify(unroll(item))
             else:
                 return error()            
         else:
@@ -46,9 +53,11 @@ class Anyone:
             
     def handle_delete(r, i, check_request, check_item, error):
         if check_request():
-            item = db[r][i]
+            item = db[r].get_or_none(id=i)
+            if(item is None): return 'Not found', 404
             if(check_item(item)):
-                return jsonify(db[r].pop(i))
+                item.delete_instance()
+                return '', 204
             else:
                 return error()
         else:
@@ -68,14 +77,13 @@ class Anyone:
         if resource not in db:
             db[resource]=None 
         for action in actions:
-            if action == list:
-                app.add_url_rule('/'+resource, 'list_'+resource, lambda:cls.handle_list(resource, cls.check_request, cls.error))
+            if action == read:
+                app.add_url_rule('/'+resource, 'read_'+resource, lambda:cls.handle_read_all(resource, cls.check_request, cls.error))
+                app.add_url_rule('/'+resource+'/<int:r_id>', 'read_one_'+resource, lambda **d: cls.handle_read_one(resource, d['r_id'], cls.check_request, cls.check_item, cls.error))
             if action == create:
                 app.add_url_rule('/'+resource, 'create_'+resource, lambda:cls.handle_create(resource, cls.check_request, cls.error), methods=['POST'])
-            if action == retrieve:
-                app.add_url_rule('/'+resource+'/<int:r_id>', 'retrieve_'+resource, lambda **d: cls.handle_retrieve(resource, d['r_id'], cls.check_request, cls.check_item, cls.error))
             if action == update:
-                app.add_url_rule('/'+resource+'/<int:r_id>', 'update_'+resource, lambda **d: cls.handle_update(resource, d['r_id'], cls.check_request, cls.check_item, cls.error), methods=['PUT'])
+                app.add_url_rule('/'+resource+'/<int:r_id>', 'update_'+resource, lambda **d: cls.handle_update(resource, d['r_id'], cls.check_request, cls.check_item, cls.error), methods=['PUT', 'PATCH'])
             if action == delete:
                 app.add_url_rule('/'+resource+'/<int:r_id>', 'delete_'+resource, lambda **d: cls.handle_delete(resource, d['r_id'], cls.check_request, cls.check_item, cls.error), methods=['DELETE'])
 
@@ -88,7 +96,8 @@ class AuthenticatedUser(Anyone):
 
 class Creator(AuthenticatedUser):    
     def check_item(item):
-        return request.headers['token'] == item['creator']
+        print(getattr(item,'creator').id)
+        return request.headers['token'] == getattr(item,'creator').username
 
 def end():
     setup()

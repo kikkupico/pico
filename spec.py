@@ -1,8 +1,7 @@
 from pico import *
 
-Anyone.can([list, create],'todos')
-Anyone.can([retrieve, update, delete],'todos')
-AuthenticatedUser.can([list, create],'teams')
-Creator.can([retrieve, update, delete], 'teams')
+Anyone.can([create, read, update, delete],'todos')
+AuthenticatedUser.can([read, create],'teams')
+Creator.can([update, delete], 'teams')
 
 end()
