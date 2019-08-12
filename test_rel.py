@@ -1,7 +1,6 @@
 import datetime, json
 from peewee import *
 from playhouse.shortcuts import model_to_dict
-from playhouse.migrate import *
 
 
 class JSONField(TextField):
@@ -14,8 +13,8 @@ class JSONField(TextField):
 
 
 db_connection = SqliteDatabase('test.db')
-migrator = SqliteMigrator(db_connection)
 db = {}
+deb_defs={}
 (system, guest)=(None, None)
 
 class User(Model):
@@ -24,17 +23,13 @@ class User(Model):
     class Meta:
         database = db_connection
 
-def make_persistent(resource):        
-    class BaseModel(Model):
+class BaseModel(Model):
         properties = JSONField()
-        created_at = DateTimeField(default=datetime.datetime.now)
-        creator = ForeignKeyField(User, backref=resource)        
+        created_at = DateTimeField(default=datetime.datetime.now)            
         class Meta:
             database = db_connection
-            db_table = resource
 
-    # BaseModel.__name__=resource
-    # BaseModel.__qualname__=resource
+def make_persistent(resource):
     db[resource] = BaseModel
 
     return BaseModel
@@ -52,18 +47,15 @@ def setup():
     db_connection.close()
 
 def test():
-    make_persistent('todos')
-    make_persistent('teams')
-
-    setup()
-    
-    migrate(migrator.add_column('todos', 'team', ForeignKeyField(db['teams'], db['teams'].id, null=True)))
-
-    t=db['teams'].create(properties={'test':'it works'}, creator=system)
-    db['todos'].create(properties={'test':'it works'}, creator=system, team=t)
-    
-    print(model_to_dict(db['todos'].get(db['todos'].id == 1)))
-
+    global system, guest    
+    db['teams'] = type('teams', (BaseModel,), {'creator':ForeignKeyField(User, backref='teams')})
+    db['todos'] = type('todos', (BaseModel,), {'team':ForeignKeyField(db['teams'], backref='todos'),'creator':ForeignKeyField(User, backref='todos')})
+    db_connection.connect()
+    db_connection.create_tables([User]+list(db.values()))
+    system=User.create(username='system', token='system')
+    t=db['teams'].create(creator=system, properties={'name':'popkik'})
+    d= db['todos'].create(creator=system, properties={'title':'it works'}, team=t)
+    print(model_to_dict(d))
 
 if __name__ == '__main__':
     test()
