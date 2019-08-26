@@ -9,6 +9,24 @@ default_props['todos']={'completed':False}
 end()
 
 
+
+'''
+
+New style spec based on refined understanding
+
+spec(
+Anyone-can-[get]-movies,
+Users-can-[post]-tickets,
+many-shows-to-one-movies,
+many-tickets-to-one-shows,
+tickets-validation-
+    (given.seats not in flattened /shows/given.show/tickets/seats)
+)
+
+'''
+
+
+
 '''
 wishlist
 
@@ -36,6 +54,7 @@ User.subpersona('Creator', condition=(info.current_user.id == info.item.creator 
 
 
 custom_actions['todo']={'mark_done':make(item.completed=True)}
+subactions['todos']={{'mark_done':(update(item.completed, True) for item in given_request())}
 
 
 
@@ -68,13 +87,21 @@ relationships['shows']={'movie':one('movies'), 'screen':one('screens')}
 relationships['tickets']{'show':one('shows')}
 
 
+subaction('shows', read) = ()
+
 
 one('shows').to.one('movies')
 
+one_to_one('shows', 'movies', as='movie')
+relationship('shows', one_to_one, 'movies', as='movie')
+
+rel('shows', have_a, 'movie', from, 'movies')
+
 relationships['item-tags']=[many('items'), many('tags')]
-
-
-
+rel('item_tags', have_many, 'items', 'tags')
+rel('item_tags', have_one, 'item', from, items')...
+rel(many, items, have, many, tags)
+rel('movies', have_many, 'shows')
 
 SHOPPING APP
 
@@ -91,6 +118,45 @@ each['orders'] = has_many(order_items)
 each[order_items] = has_
 
 each order has many order_items
+
+
+
+
+STYLES
+
+(movies, shows, tickets) = ('movies'...)
+
+spec(
+(Anyone, can, view, shows),
+(Users, can, book, tickets),
+)
+
+spec(
+Anyone.can.view.shows,
+Users.can.book.tickets,
+)
+
+
+spec(
+Anyone-can-view-shows,
+Users-can-book-tickets
+)
+
+
+config(CORS=True,DB=sqllite,logging_level='debug')
+
+spec(
+Anyone can view shows
+User can book tickets
+shows have a 'movie' from movies
+tickets have a 'show' from shows
+)
+
+spec(
+(anyone can view shows)
+(user can book tickets)
+(shows have one 'movie' from movies)
+)
 
 =====================================================
 '''

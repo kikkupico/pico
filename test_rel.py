@@ -46,6 +46,14 @@ def setup():
     guest=User.create(username='guest', token='guest')
     db_connection.close()
 
+def finalize():
+    ...
+
+'''
+relationships['tickets']{'show':one('shows')} => {'show':ForeignKeyField(db['shows'], backref='tickets')}
+
+'''
+
 def test():
     global system, guest    
     db['teams'] = type('teams', (BaseModel,), {'creator':ForeignKeyField(User, backref='teams')})
