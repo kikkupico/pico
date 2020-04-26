@@ -6,6 +6,7 @@
                  [compojure "1.6.1"]
                  [ring/ring-defaults "0.3.2"]
                  [ring/ring-json "0.5.0"]
+                 [org.clojure/core.match "1.0.0"]
                  [org.clojure/data.json "1.0.0"]
                  [org.clojure/java.jdbc "0.7.8"]
                  [org.xerial/sqlite-jdbc "3.23.1"]]

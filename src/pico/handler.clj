@@ -21,10 +21,10 @@
       (response
         (map rowToJson (jdbc/query db-spec [(str "SELECT * from " url )]))))
     (GET (str "/" url "/" ":id") [id]      
-        (if-let 
-          [item (get 0 (jdbc/query db-spec [(str "SELECT * from " url " where id = " id)]))]
-            (response (map rowToJson item))
-            {:status 404 :body "Not found"}))
+        (let [items (jdbc/query db-spec [(str "SELECT * from " url " where id = " id)])]          
+          (if (empty? items)
+            {:status 404 :body "Not found"}
+            (response (first (map rowToJson items))))))
     (POST (str "/" url) req 
       (jdbc/insert! db-spec url {:properties (json/write-str (:body req))}) "OK")
     (PUT (str "/" url) req url)
