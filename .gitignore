@@ -1,2 +1,11 @@
-/__pycache__
-/temp.db
+/target
+/lib
+/classes
+/checkouts
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+/.lein-*
+/.nrepl-port
+/db/database.db
